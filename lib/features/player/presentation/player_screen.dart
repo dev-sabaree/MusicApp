@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:music_app/features/auth/data/auth_provider.dart';
 import 'package:music_app/features/pairing/data/pairing_provider.dart';
 import 'package:music_app/features/player/data/player_provider.dart';
 import 'package:music_app/core/repositories/mock_pairing_repository.dart';
@@ -24,187 +23,278 @@ class PlayerScreen extends ConsumerWidget {
     final isPaired = pairingState.status == PairingStatus.paired;
     final song = playerState.currentSong;
 
-    if (song == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (song == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Now Playing'),
+        title: const Text('Couple Player'),
         actions: [
           if (isPaired)
             IconButton(
-              icon: const Icon(Icons.link, color: Colors.green),
+              icon: const Icon(Icons.favorite, color: Colors.pinkAccent),
               onPressed: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Synced with partner')),
-                 );
+                controller.reactWithHeart();
               },
             ),
-          // Demo button to simulate partner action (only if paired effectively, but kept for demo)
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            tooltip: 'Simulate Partner Action',
-            onPressed: () => controller.mockPartnerAction(playerState.isPlaying ? 'pause' : 'play'),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: controller.mockPartnerAction,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'play', child: Text('Partner: Play')),
+              PopupMenuItem(value: 'pause', child: Text('Partner: Pause')),
+              PopupMenuItem(value: 'seek', child: Text('Partner: Seek +30s')),
+              PopupMenuItem(value: 'heart', child: Text('Partner: Send ❤️')),
+              PopupMenuItem(value: 'next', child: Text('Partner: Next Song')),
+            ],
           ),
         ],
       ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              theme.colorScheme.primaryContainer.withOpacity(0.3),
-              theme.colorScheme.background,
+              theme.colorScheme.primary.withOpacity(0.35),
+              theme.colorScheme.secondary.withOpacity(0.2),
+              theme.colorScheme.surface,
             ],
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(20),
             children: [
-              const SizedBox(height: 80), // For extended app bar
-              // Cover Art
               Container(
-                height: 300,
-                width: 300,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade800,
-                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.white.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.graphic_eq_rounded, color: Colors.greenAccent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isPaired
+                            ? 'Live synced with your partner'
+                            : 'Solo mode: pair to unlock live reactions',
+                      ),
+                    ),
+                    Text(
+                      playerState.lastActionSource.isEmpty
+                          ? 'Ready'
+                          : 'Last: ${playerState.lastActionSource}',
+                      style: theme.textTheme.labelMedium,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                height: 280,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF6A5AE0), Color(0xFFB07DFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      spreadRadius: 2,
+                      color: Colors.black.withOpacity(0.4),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-                child: Icon(Icons.album, size: 120, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                child: const Center(
+                  child: Icon(Icons.album_rounded, size: 140, color: Colors.white70),
+                ),
               ),
-              const SizedBox(height: 40),
-              
-              // Song Info
+              const SizedBox(height: 24),
               Text(
                 song.title,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 song.artist,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7)
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(color: Colors.white70),
                 textAlign: TextAlign.center,
               ),
-              
-              const SizedBox(height: 48),
-
-              // Seek Bar
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   Text(_formatDuration(playerState.position), style: theme.textTheme.bodySmall),
-                   Text(_formatDuration(song.duration), style: theme.textTheme.bodySmall),
+                  Text(_formatDuration(playerState.position)),
+                  Text(_formatDuration(song.duration)),
                 ],
               ),
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                  trackHeight: 4.0,
-                ),
-                child: Slider(
-                  value: playerState.position.inSeconds.toDouble().clamp(0, song.duration.inSeconds.toDouble()),
-                  max: song.duration.inSeconds.toDouble(),
-                  onChanged: (value) {
-                    controller.seek(Duration(seconds: value.toInt()));
-                  },
-                  activeColor: theme.colorScheme.primary,
-                  inactiveColor: theme.colorScheme.onSurface.withOpacity(0.2),
-                ),
+              Slider(
+                value: playerState.position.inSeconds.toDouble().clamp(0, song.duration.inSeconds.toDouble()),
+                max: song.duration.inSeconds.toDouble(),
+                onChanged: (value) => controller.seek(Duration(seconds: value.toInt())),
               ),
-              
-              const SizedBox(height: 24),
-              
-              // Controls
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.skip_previous_rounded, size: 48),
-                    color: theme.colorScheme.onSurface,
-                    onPressed: () {},
+                    onPressed: controller.previousSong,
+                    icon: const Icon(Icons.skip_previous_rounded, size: 38),
                   ),
-                  const SizedBox(width: 32),
-                  Container(
+                  const SizedBox(width: 18),
+                  Ink(
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
                       color: theme.colorScheme.primary,
-                      boxShadow: [
-                         BoxShadow(
-                           color: theme.colorScheme.primary.withOpacity(0.4),
-                           blurRadius: 10,
-                           spreadRadius: 2,
-                         )
-                      ]
+                      shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      iconSize: 48,
-                      icon: Icon(playerState.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
-                      color: theme.colorScheme.onPrimary,
-                      onPressed: playerState.isPlaying ? controller.pause : controller.play,
+                      onPressed: () => playerState.isPlaying ? controller.pause() : controller.play(),
+                      icon: Icon(
+                        playerState.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        size: 42,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 32),
+                  const SizedBox(width: 18),
                   IconButton(
-                     icon: const Icon(Icons.skip_next_rounded, size: 48),
-                     color: theme.colorScheme.onSurface,
-                     onPressed: () {},
+                    onPressed: controller.nextSong,
+                    icon: const Icon(Icons.skip_next_rounded, size: 38),
                   ),
                 ],
               ),
-              
-              const Spacer(),
-              
-              // Sync Indicator (Only if paired)
-              if (isPaired && playerState.lastActionSource.isNotEmpty)
-                Container(
-                   margin: const EdgeInsets.only(bottom: 32),
-                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                   decoration: BoxDecoration(
-                     color: theme.colorScheme.surfaceVariant,
-                     borderRadius: BorderRadius.circular(20),
-                   ),
-                   child: Row(
-                     mainAxisSize: MainAxisSize.min,
-                     children: [
-                       Icon(
-                         playerState.lastActionSource == "You" ? Icons.person : Icons.group,
-                         size: 16,
-                         color: theme.colorScheme.primary,
-                       ),
-                       const SizedBox(width: 8),
-                       Text(
-                         playerState.lastActionSource == "You"
-                            ? "Corrected by you"
-                            : "Partner updated playback", // More generic for demo
-                         style: theme.textTheme.labelMedium?.copyWith(
-                           color: theme.colorScheme.onSurfaceVariant,
-                         ),
-                       ),
-                     ],
-                   ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-               if (!isPaired)
-                 const SizedBox(height: 60), // Spacer placeholder to keep layout stable
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Dedication note', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    Text(playerState.dedicationNote),
+                    const SizedBox(height: 10),
+                    FilledButton.tonalIcon(
+                      onPressed: () => _showDedicationEditor(context, controller, playerState.dedicationNote),
+                      icon: const Icon(Icons.edit_note_rounded),
+                      label: const Text('Edit note'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatChip(label: 'Your ❤️', value: '${playerState.yourHearts}'),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StatChip(label: 'Partner ❤️', value: '${playerState.partnerHearts}'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white.withOpacity(0.05),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Up next', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 10),
+                    if (playerState.queue.isEmpty)
+                      const Text('Queue is empty')
+                    else
+                      ...playerState.queue.take(3).map(
+                            (queuedSong) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.music_note_rounded, size: 18),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text('${queuedSong.title} • ${queuedSong.artist}')),
+                                ],
+                              ),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _showDedicationEditor(
+    BuildContext context,
+    PlayerController controller,
+    String currentNote,
+  ) async {
+    final inputController = TextEditingController(text: currentNote);
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Update dedication'),
+          content: TextField(
+            controller: inputController,
+            maxLength: 80,
+            decoration: const InputDecoration(hintText: 'A short sweet message...'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                controller.setDedicationNote(inputController.text);
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: Colors.white.withOpacity(0.08),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 4),
+          Text(value, style: Theme.of(context).textTheme.titleLarge),
+        ],
       ),
     );
   }
