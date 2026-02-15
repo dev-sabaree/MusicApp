@@ -1,0 +1,15 @@
+{
+  "name": "music-app-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Simple backend API for MusicApp",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:node": "node server.js",
+    "start:dart": "dart run dart_server.dart"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
